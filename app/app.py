@@ -230,24 +230,39 @@ def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processe
             </div>
 
             <h2>📊 Architecture Overview</h2>
-            <div class="architecture-diagram">
-┌─────────────────────────────────────────────┐
-│  Container (DigitalOcean App Platform)      │
-│                                             │
-│  ┌───────────────────────────────────────┐ │
-│  │ PID 1: supervisord                     │ │
-│  │ Role: Process supervisor & init        │ │
-│  └─────────────────┬───────────────────── │ │
-│                    │                        │
-│         ┏━━━━━━━━━━┻━━━━━━━━━━┓            │
-│         ▼                      ▼            │
-│  ┌─────────────┐      ┌──────────────┐    │
-│  │ PID %d      │      │ Other        │    │
-│  │ Flask App   │      │ Processes    │    │
-│  │ Port 8080   │      │ (workers)    │    │
-│  └─────────────┘      └──────────────┘    │
-│                                             │
-└─────────────────────────────────────────────┘
+            <div style="background: #fff; border: 2px solid #0080FF; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <div style="text-align: center; color: #666; font-weight: bold; margin-bottom: 20px;">
+                    Container (DigitalOcean App Platform)
+                </div>
+
+                <div style="background: #e3f2fd; border: 2px solid #0080FF; border-radius: 6px; padding: 15px; margin: 10px 20px;">
+                    <div style="text-align: center;">
+                        <div style="background: #0080FF; color: white; display: inline-block; padding: 10px 20px; border-radius: 6px; margin-bottom: 10px;">
+                            <strong>PID 1: supervisord</strong>
+                        </div>
+                        <div style="color: #666; font-size: 14px;">Process Supervisor &amp; Init System</div>
+                    </div>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <div style="font-size: 24px; color: #0080FF;">↓</div>
+                        <div style="color: #666; font-size: 12px;">manages</div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;">
+                        <div style="background: white; border: 2px solid #28a745; border-radius: 6px; padding: 15px; min-width: 200px; text-align: center;">
+                            <div style="color: #28a745; font-weight: bold; margin-bottom: 5px;">✓ RUNNING</div>
+                            <div style="font-weight: bold;">PID %d</div>
+                            <div style="color: #666; font-size: 14px; margin-top: 5px;">Flask Application</div>
+                            <div style="color: #999; font-size: 12px;">Port 8080</div>
+                        </div>
+
+                        <div style="background: white; border: 2px dashed #ccc; border-radius: 6px; padding: 15px; min-width: 200px; text-align: center;">
+                            <div style="color: #999; font-weight: bold; margin-bottom: 5px;">+ Additional Processes</div>
+                            <div style="color: #666; font-size: 14px;">Background Workers</div>
+                            <div style="color: #999; font-size: 12px;">OTEL Agent, etc.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <h2>🎯 PID 1 (Init Process)</h2>
