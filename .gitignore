@@ -54,3 +54,6 @@ htmlcov/
 
 # Supervisor
 /var/run/supervisor.sock
+
+# Docker
+.env.local

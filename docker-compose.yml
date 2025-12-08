@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  supervisord-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=development
+      - PORT=8080
+      - OTEL_ENABLED=false
+    container_name: supervisord-app
+    restart: unless-stopped
+    # Optional: mount for live development
+    # volumes:
+    #   - ./app:/app
+    #   - ./config/supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
