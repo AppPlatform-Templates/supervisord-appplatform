@@ -47,10 +47,10 @@ services:
         value: "true"
         scope: RUN_TIME
 
-      # Logs to console by default for easy debugging
-      # Set OTEL_EXPORTER_OTLP_ENDPOINT to send to your collector
+      # Flask app sends to local OTEL Collector sidecar
+      # The collector then forwards to your backend (configure in otel-collector-config.yaml)
       - key: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: ""
+        value: "http://localhost:4318"
         scope: RUN_TIME
 
       # Service name for distributed tracing
