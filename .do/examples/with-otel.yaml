@@ -1,0 +1,78 @@
+# Supervisord with OpenTelemetry Agent
+# Multi-process deployment with observability
+# Cost: ~$12/month (1vcpu/1GB Basic plan)
+#
+# This configuration enables the OpenTelemetry agent as a second process
+# Deploy with: doctl apps create --spec .do/examples/with-otel.yaml
+
+name: supervisord-app-otel
+
+services:
+  - name: supervisord-service
+    # Build from source (Dockerfile in repository root)
+    github:
+      repo: AppPlatform-Templates/supervisord-appplatform
+      branch: main
+      deploy_on_push: true
+
+    # Container configuration
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-2gb  # Slightly more memory for OTEL
+
+    # Health check configuration
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 40
+      period_seconds: 10
+      timeout_seconds: 3
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Environment variables
+    envs:
+      # Application Environment
+      - key: APP_ENV
+        value: production
+        scope: RUN_TIME
+
+      # Port
+      - key: PORT
+        value: "8080"
+        scope: RUN_TIME
+
+      # OpenTelemetry Configuration - ENABLED
+      - key: OTEL_ENABLED
+        value: "true"
+        scope: RUN_TIME
+
+      # OpenTelemetry Endpoint
+      # Replace with your actual OTEL collector endpoint
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: https://otel-collector.example.com
+        scope: RUN_TIME
+
+      # Service name for distributed tracing
+      - key: OTEL_SERVICE_NAME
+        value: supervisord-app
+        scope: RUN_TIME
+
+      # Optional: OTEL authentication headers
+      # - key: OTEL_EXPORTER_OTLP_HEADERS
+      #   value: api-key=YOUR_API_KEY
+      #   scope: RUN_TIME
+      #   type: SECRET
+
+      # Template tracking
+      - key: BASE_TEMPLATE
+        value: supervisord
+        scope: RUN_TIME
+
+      - key: TEMPLATE_TYPE
+        value: with-otel
+        scope: RUN_TIME
+
+      - key: TEMPLATE_VERSION
+        value: v1.0.0
+        scope: RUN_TIME
