@@ -3,10 +3,11 @@ Example Flask Application managed by Supervisord
 This is a simple demo app to showcase multi-process management
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Response, request
 import os
 import sys
 import logging
+import subprocess
 
 # Configure logging
 logging.basicConfig(
@@ -20,40 +21,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    """Home endpoint"""
-    return jsonify({
-        'message': 'Hello from Supervisord-managed app!',
-        'status': 'running',
-        'processes': 'managed by supervisord'
-    })
-
-@app.route('/health')
-def health():
-    """Health check endpoint for App Platform"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'supervisord-app'
-    }), 200
-
-@app.route('/info')
-def info():
-    """Show environment and process information"""
-    return jsonify({
-        'environment': {
-            'APP_ENV': os.getenv('APP_ENV', 'development'),
-            'PORT': os.getenv('PORT', '8080'),
-            'OTEL_ENABLED': os.getenv('OTEL_ENABLED', 'false')
-        },
-        'process_manager': 'supervisord',
-        'python_version': sys.version
-    })
-
-@app.route('/processes')
-def processes():
-    """Show process tree and supervisord information"""
-    import subprocess
-    from flask import request
-
+    """Home endpoint - shows process architecture"""
     try:
         # Get current process info
         current_pid = os.getpid()
@@ -92,32 +60,35 @@ def processes():
         except Exception as e:
             pid1_cmd = f"Error: {str(e)}"
 
-        # Check if HTML format is requested
-        if request.args.get('format') == 'html' or 'text/html' in request.headers.get('Accept', ''):
-            return render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processes, ps_output)
-
-        return jsonify({
-            'status': 'ok',
-            'architecture': {
-                'description': 'Multi-process container managed by supervisord',
-                'pid_1': {
-                    'process': 'supervisord',
-                    'command': pid1_cmd,
-                    'role': 'Process supervisor and PID 1'
+        # Check if JSON format is requested
+        if request.args.get('format') == 'json':
+            return jsonify({
+                'status': 'ok',
+                'architecture': {
+                    'description': 'Multi-process container managed by supervisord',
+                    'pid_1': {
+                        'process': 'supervisord',
+                        'command': pid1_cmd,
+                        'role': 'Process supervisor and PID 1'
+                    },
+                    'managed_processes': supervisor_processes
                 },
-                'managed_processes': supervisor_processes
-            },
-            'current_request': {
-                'handler_pid': current_pid,
-                'parent_pid': current_ppid,
-                'process_name': 'Flask application'
-            },
-            'raw_data': {
-                'supervisor_status': supervisor_status,
-                'process_tree': ps_output
-            }
-        })
+                'current_request': {
+                    'handler_pid': current_pid,
+                    'parent_pid': current_ppid,
+                    'process_name': 'Flask application'
+                },
+                'raw_data': {
+                    'supervisor_status': supervisor_status,
+                    'process_tree': ps_output
+                }
+            })
+
+        # Return HTML view
+        return render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processes, ps_output)
+
     except Exception as e:
+        logger.error(f"Error in home endpoint: {e}", exc_info=True)
         return jsonify({
             'error': str(e),
             'current_process': {
@@ -125,6 +96,27 @@ def processes():
                 'ppid': os.getppid()
             }
         }), 500
+
+@app.route('/health')
+def health():
+    """Health check endpoint for App Platform"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'supervisord-app'
+    }), 200
+
+@app.route('/info')
+def info():
+    """Show environment and process information"""
+    return jsonify({
+        'environment': {
+            'APP_ENV': os.getenv('APP_ENV', 'development'),
+            'PORT': os.getenv('PORT', '8080'),
+            'OTEL_ENABLED': os.getenv('OTEL_ENABLED', 'false')
+        },
+        'process_manager': 'supervisord',
+        'python_version': sys.version
+    })
 
 def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processes, ps_output):
     """Render a nice HTML view of the process information"""
@@ -309,14 +301,13 @@ def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processe
             <pre>{ps_output}</pre>
 
             <p style="text-align: center; color: #666; margin-top: 40px;">
-                <small>Add <code>?format=json</code> to get JSON output</small>
+                <small>Add <code>?format=json</code> to URL for JSON API response | <a href="/health">Health Check</a> | <a href="/info">Info</a></small>
             </p>
         </div>
     </body>
     </html>
     """
 
-    from flask import Response
     return Response(html, mimetype='text/html')
 
 if __name__ == '__main__':
