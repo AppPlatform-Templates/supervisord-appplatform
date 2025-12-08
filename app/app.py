@@ -48,6 +48,56 @@ def info():
         'python_version': sys.version
     })
 
+@app.route('/processes')
+def processes():
+    """Show process tree and supervisord information"""
+    import subprocess
+
+    try:
+        # Get current process info
+        current_pid = os.getpid()
+        current_ppid = os.getppid()
+
+        # Get process tree
+        ps_output = subprocess.check_output(['ps', 'auxf'], text=True)
+
+        # Get supervisorctl status if available
+        supervisor_status = None
+        try:
+            supervisor_status = subprocess.check_output(
+                ['supervisorctl', '-c', '/etc/supervisor/conf.d/supervisord.conf', 'status'],
+                text=True,
+                stderr=subprocess.STDOUT
+            )
+        except Exception as e:
+            supervisor_status = f"Error getting supervisor status: {str(e)}"
+
+        # Get PID 1 info
+        pid1_info = None
+        try:
+            pid1_info = subprocess.check_output(['ps', '-p', '1', '-o', 'pid,ppid,cmd'], text=True)
+        except Exception as e:
+            pid1_info = f"Error: {str(e)}"
+
+        return jsonify({
+            'current_process': {
+                'pid': current_pid,
+                'ppid': current_ppid,
+                'description': 'This Flask app process'
+            },
+            'pid_1_info': pid1_info,
+            'supervisor_status': supervisor_status,
+            'full_process_tree': ps_output
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'current_process': {
+                'pid': os.getpid(),
+                'ppid': os.getppid()
+            }
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
     logger.info(f"Starting Flask app on port {port}")
