@@ -23,15 +23,17 @@ make up
 make dev
 ```
 
-The application will be available at: **http://localhost:8080**
+The application will be available at: **http://127.0.0.1:8080**
+
+**Note**: If you're using OrbStack, use `127.0.0.1` instead of `localhost` due to networking differences.
 
 ### 2. View the Dashboard
 
 Open your browser and visit:
-- **http://localhost:8080** - Process monitoring dashboard
-- **http://localhost:8080/health** - Health check
-- **http://localhost:8080/info** - Environment info
-- **http://localhost:8080/?format=json** - JSON API
+- **http://127.0.0.1:8080** - Process monitoring dashboard
+- **http://127.0.0.1:8080/health** - Health check
+- **http://127.0.0.1:8080/info** - Environment info
+- **http://127.0.0.1:8080/?format=json** - JSON API
 
 ### 3. Stop the Application
 
@@ -171,7 +173,7 @@ make status
 
 ### Option 1: Web Dashboard
 
-Visit **http://localhost:8080** in your browser to see:
+Visit **http://127.0.0.1:8080** in your browser to see:
 - Visual architecture diagram
 - PID 1 (supervisord) information
 - All managed processes
@@ -226,7 +228,7 @@ ports:
   - "8888:8080"  # Change host port to 8888
 ```
 
-Then visit http://localhost:8888
+Then visit http://127.0.0.1:8888
 
 ### Cannot Connect to Docker
 

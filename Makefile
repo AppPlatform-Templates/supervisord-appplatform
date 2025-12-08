@@ -9,7 +9,8 @@ up:
 	docker-compose up -d
 	@echo ""
 	@echo "✅ Application started!"
-	@echo "🌐 Visit: http://localhost:8080"
+	@echo "🌐 Visit: http://127.0.0.1:8080"
+	@echo "   (If using OrbStack, use 127.0.0.1 instead of localhost)"
 	@echo "📊 View logs: make logs"
 	@echo ""
 
@@ -53,14 +54,14 @@ fresh: clean build up
 # Test the application
 test:
 	@echo "Testing health endpoint..."
-	@curl -s http://localhost:8080/health | python3 -m json.tool
+	@curl -s http://127.0.0.1:8080/health | python3 -m json.tool
 	@echo ""
 	@echo "Testing info endpoint..."
-	@curl -s http://localhost:8080/info | python3 -m json.tool
+	@curl -s http://127.0.0.1:8080/info | python3 -m json.tool
 
 # Show process information
 processes:
-	@curl -s "http://localhost:8080/?format=json" | python3 -m json.tool
+	@curl -s "http://127.0.0.1:8080/?format=json" | python3 -m json.tool
 
 help:
 	@echo "Available commands:"
