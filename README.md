@@ -20,10 +20,10 @@ Supervisord is a process control system that allows you to monitor and control m
 
 ## Use Cases
 
-- **Application + Background Worker**: Run a web server with a background job processor
-- **Multi-Service Applications**: Combine related services that need to share the same filesystem
-- **Observability**: Run monitoring agents (OpenTelemetry, StatsD, etc.) alongside your application
-- **Legacy Applications**: Modernize applications that need multiple processes without redesigning architecture
+- **Web Service + Monitoring Agent**: Run your application with OpenTelemetry, StatsD, or other monitoring agents
+- **Web Service + Sidecar Processes**: Add auxiliary processes that need to run alongside your main application
+- **Multi-Process Applications**: Applications that need multiple related processes on the same host
+- **Agent-Based Architecture**: Run your app with agents for observability, security scanning, or data collection
 
 ## Quick Start
 
@@ -63,19 +63,19 @@ Your app will be deployed and accessible at the URL provided by App Platform!
 
 ## Deployment Options
 
-### Starter (Basic Multi-Process)
+### Starter (Basic Setup)
 **Cost**: ~$12/month
 **Instance**: 1 vCPU, 1GB RAM
-**Processes**: Main app + optional background processes
+**What you get**: Web service managed by supervisord, ready for adding agents
 
 ```bash
 doctl apps create --spec .do/examples/starter.yaml
 ```
 
-### With OpenTelemetry
+### With OpenTelemetry Agent
 **Cost**: ~$12-18/month
 **Instance**: 1 vCPU, 2GB RAM
-**Processes**: Main app + OpenTelemetry agent
+**What you get**: Web service + OpenTelemetry agent for observability
 
 ```bash
 doctl apps create --spec .do/examples/with-otel.yaml
@@ -97,9 +97,10 @@ doctl apps create --spec .do/examples/with-otel.yaml
 │  │    ┌────────┴────────┐       │ │
 │  │    │                 │       │ │
 │  │  ┌─▼──────┐    ┌────▼─────┐ │ │
-│  │  │  App   │    │  Worker/ │ │ │
-│  │  │ (Flask)│    │   OTEL   │ │ │
-│  │  │:8080   │    │  Agent   │ │ │
+│  │  │  Your  │    │Optional  │ │ │
+│  │  │  Web   │    │ Agents/  │ │ │
+│  │  │  App   │    │Sidecars  │ │ │
+│  │  │:8080   │    │          │ │ │
 │  │  └────────┘    └──────────┘ │ │
 │  │                               │ │
 │  └───────────────────────────────┘ │
