@@ -59,6 +59,13 @@ test:
 	@echo "Testing info endpoint..."
 	@curl -s http://127.0.0.1:8080/info | python3 -m json.tool
 
+# Test OTEL trace generation
+test-trace:
+	@echo "Generating test trace..."
+	@curl -s http://127.0.0.1:8080/test-trace | python3 -m json.tool
+	@echo ""
+	@echo "View traces with: make logs | grep custom-operation"
+
 # Show process information
 processes:
 	@curl -s "http://127.0.0.1:8080/?format=json" | python3 -m json.tool
@@ -77,5 +84,6 @@ help:
 	@echo "  make clean       - Remove containers and images"
 	@echo "  make fresh       - Clean rebuild and start"
 	@echo "  make test        - Test health and info endpoints"
+	@echo "  make test-trace  - Generate OTEL test trace"
 	@echo "  make processes   - Show process architecture (JSON)"
 	@echo "  make help        - Show this help message"

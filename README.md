@@ -48,38 +48,40 @@ No CLI tools required!
 
 1. **Fork this repository** to your GitHub account
 
-2. **Update the App Spec**: Edit `.do/app.yaml` or use one of the examples in `.do/examples/`:
+2. **Update the App Spec**: Edit `.do/app.yaml`:
    ```bash
-   # Replace AppPlatform-Templates with your actual GitHub username
-   sed -i '' 's/AppPlatform-Templates/your-username/g' .do/examples/starter.yaml
+   # Replace AppPlatform-Templates with your GitHub username
+   sed -i '' 's/AppPlatform-Templates/your-username/g' .do/app.yaml
    ```
 
 3. **Deploy to App Platform**:
    ```bash
-   doctl apps create --spec .do/examples/starter.yaml
+   doctl apps create --spec .do/app.yaml
    ```
 
-Your app will be deployed and accessible at the URL provided by App Platform!
+Your app will be deployed with **2 processes running**:
+- ✅ Flask web service (port 8080)
+- ✅ OpenTelemetry agent (sidecar)
+- ✅ Both managed by supervisord (PID 1)
 
-## Deployment Options
+Visit the app URL to see the live process dashboard!
 
-### Starter (Basic Setup)
-**Cost**: ~$12/month
-**Instance**: 1 vCPU, 1GB RAM
-**What you get**: Web service managed by supervisord, ready for adding agents
+## What's Included
 
-```bash
-doctl apps create --spec .do/examples/starter.yaml
-```
+**Cost**: ~$12/month (1 vCPU, 1GB RAM)
 
-### With OpenTelemetry Agent
-**Cost**: ~$12-18/month
-**Instance**: 1 vCPU, 2GB RAM
-**What you get**: Web service + OpenTelemetry agent for observability
+**Running Processes**:
+1. **Supervisord** (PID 1) - Process supervisor managing everything
+2. **Flask Web App** - Your application on port 8080 with OpenTelemetry instrumentation
+3. **OTEL Agent** - OpenTelemetry sidecar for observability
 
-```bash
-doctl apps create --spec .do/examples/with-otel.yaml
-```
+**Features**:
+- Process dashboard at `/` showing all running processes
+- Health check endpoint at `/health`
+- Test trace endpoint at `/test-trace` to verify OTEL instrumentation
+- Automatic trace generation for all HTTP requests
+
+The template demonstrates multi-process architecture - perfect for adding monitoring agents, security scanners, or any sidecar processes alongside your web service!
 
 ## Architecture
 
@@ -97,9 +99,9 @@ doctl apps create --spec .do/examples/with-otel.yaml
 │  │    ┌────────┴────────┐       │ │
 │  │    │                 │       │ │
 │  │  ┌─▼──────┐    ┌────▼─────┐ │ │
-│  │  │  Your  │    │Optional  │ │ │
-│  │  │  Web   │    │ Agents/  │ │ │
-│  │  │  App   │    │Sidecars  │ │ │
+│  │  │ Flask  │    │   OTEL   │ │ │
+│  │  │  Web   │    │  Agent   │ │ │
+│  │  │  App   │    │ (Sidecar)│ │ │
 │  │  │:8080   │    │          │ │ │
 │  │  └────────┘    └──────────┘ │ │
 │  │                               │ │
@@ -112,16 +114,17 @@ doctl apps create --spec .do/examples/with-otel.yaml
 ```
 supervisord-appplatform/
 ├── .do/
-│   ├── app.yaml                 # Main App Platform spec
-│   └── examples/
-│       ├── starter.yaml         # Basic deployment
-│       └── with-otel.yaml       # With OpenTelemetry
+│   ├── app.yaml                 # App Platform deployment spec
+│   └── deploy.template.yaml     # Deploy button template
 ├── app/
 │   ├── app.py                   # Example Flask application
-│   └── requirements.txt         # Python dependencies
+│   ├── requirements.txt         # Python dependencies (includes OTEL)
+│   └── start.sh                 # Application startup script
 ├── config/
 │   └── supervisord.conf         # Supervisord configuration
 ├── Dockerfile                   # Container definition
+├── docker-compose.yml           # Local development setup
+├── Makefile                     # Development commands
 ├── README.md                    # This file
 └── .gitignore
 ```
@@ -227,24 +230,39 @@ tail -f /var/log/app/app.out.log
 tail -f /var/log/app/app.err.log
 ```
 
-## Adding OpenTelemetry Instrumentation
+## OpenTelemetry Instrumentation
 
-1. **Uncomment OpenTelemetry dependencies** in `app/requirements.txt`:
-   ```
-   opentelemetry-distro==0.45b0
-   opentelemetry-exporter-otlp==1.24.0
-   opentelemetry-instrumentation-flask==0.45b0
-   ```
+The template includes OpenTelemetry instrumentation out of the box, demonstrating how to run monitoring agents alongside your application.
 
-2. **Enable in App Platform**:
+### Testing OTEL Locally
+
+The Flask app is automatically instrumented and generates traces for all HTTP requests:
+
+```bash
+# View automatic traces from any endpoint
+curl http://localhost:8080/health
+docker-compose logs | grep -i trace
+
+# Test custom span creation
+curl http://localhost:8080/test-trace
+docker-compose logs | grep "custom-operation"
+```
+
+Every request generates trace spans with trace IDs, span IDs, and attributes. The `/test-trace` endpoint demonstrates how to create custom spans in your own code. By default, traces are exported to console for easy debugging.
+
+### Sending Traces to a Collector
+
+To send traces to your OTEL collector in production:
+
+1. **Update the OTEL endpoint** in `.do/app.yaml`:
    ```yaml
-   - key: OTEL_ENABLED
-     value: "true"
-   - key: OTEL_EXPORTER_OTLP_ENDPOINT
+   - key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
      value: https://your-otel-collector.example.com
    ```
 
-3. **Deploy** and your application will automatically be instrumented!
+2. **Deploy** and your application will automatically send traces to your collector!
+
+The OTEL agent process runs alongside your app as a sidecar, demonstrating supervisord's multi-process management capabilities.
 
 ## Production Considerations
 
@@ -322,7 +340,7 @@ autorestart=true
 - [Supervisord Documentation](http://supervisord.org/)
 - [DigitalOcean App Platform Docs](https://docs.digitalocean.com/products/app-platform/)
 - [App Platform Pricing](https://www.digitalocean.com/pricing/app-platform)
-- [Example Applications](./examples/)
+- [OpenTelemetry Documentation](https://opentelemetry.io/docs/)
 
 ## Contributing
 

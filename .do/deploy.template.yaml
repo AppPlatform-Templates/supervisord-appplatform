@@ -35,29 +35,20 @@ spec:
         value: "8080"
         scope: RUN_TIME
 
-      # OpenTelemetry Configuration (Optional)
-      # Set to "true" to enable the OpenTelemetry agent process
-      - key: OTEL_ENABLED
-        value: "false"
+      # OpenTelemetry Configuration
+      # Logs to console by default - set endpoint to send to your collector
+      - key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+        value: ""
         scope: RUN_TIME
 
-      # If OTEL is enabled, configure the endpoint
-      # Uncomment and set your OTEL collector endpoint
-      # - key: OTEL_EXPORTER_OTLP_ENDPOINT
-      #   value: https://your-otel-collector.example.com
-      #   scope: RUN_TIME
-      #
-      # - key: OTEL_SERVICE_NAME
-      #   value: supervisord-app
-      #   scope: RUN_TIME
+      # Service name for distributed tracing
+      - key: OTEL_SERVICE_NAME
+        value: supervisord-app
+        scope: RUN_TIME
 
-      # Template tracking (for DigitalOcean analytics)
+      # Template tracking
       - key: BASE_TEMPLATE
         value: supervisord
-        scope: RUN_TIME
-
-      - key: TEMPLATE_TYPE
-        value: starter
         scope: RUN_TIME
 
       - key: TEMPLATE_VERSION

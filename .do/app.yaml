@@ -1,6 +1,6 @@
-# Supervisord Multi-Process App Platform Template
-# Demonstrates running multiple processes in a single container using supervisord
-# Cost: ~$12/month (1vcpu/1GB Basic plan)
+# Supervisord App Platform Template
+# Web service with OpenTelemetry agent sidecar
+# Demonstrates multi-process management with supervisord
 #
 # Deploy with: doctl apps create --spec .do/app.yaml
 
@@ -36,27 +36,24 @@ services:
         value: production
         scope: RUN_TIME
 
-      # Port (App Platform sets this automatically, but good to be explicit)
+      # Port
       - key: PORT
         value: "8080"
         scope: RUN_TIME
 
-      # OpenTelemetry Configuration (Optional)
-      # Set to "true" to enable the OpenTelemetry agent process
-      - key: OTEL_ENABLED
-        value: "false"
+      # OpenTelemetry Configuration
+      # Logs to console by default for easy debugging
+      # Set OTEL_EXPORTER_OTLP_ENDPOINT to send to your collector
+      - key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+        value: ""
         scope: RUN_TIME
 
-      # If OTEL is enabled, configure the endpoint
-      # - key: OTEL_EXPORTER_OTLP_ENDPOINT
-      #   value: https://your-otel-collector.example.com
-      #   scope: RUN_TIME
-      #
-      # - key: OTEL_SERVICE_NAME
-      #   value: supervisord-app
-      #   scope: RUN_TIME
+      # Service name for distributed tracing
+      - key: OTEL_SERVICE_NAME
+        value: supervisord-app
+        scope: RUN_TIME
 
-      # Template tracking (for analytics)
+      # Template tracking
       - key: BASE_TEMPLATE
         value: supervisord
         scope: RUN_TIME
@@ -64,7 +61,3 @@ services:
       - key: TEMPLATE_VERSION
         value: v1.0.0
         scope: RUN_TIME
-
-    # Optional: Add routes for custom domains
-    # routes:
-    #   - path: /

@@ -8,7 +8,9 @@ services:
     environment:
       - APP_ENV=development
       - PORT=8080
-      - OTEL_ENABLED=false
+      - OTEL_ENABLED=true
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=
+      - OTEL_SERVICE_NAME=supervisord-app
     container_name: supervisord-app
     restart: unless-stopped
     # Optional: mount for live development

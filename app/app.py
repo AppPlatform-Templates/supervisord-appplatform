@@ -8,6 +8,8 @@ import os
 import sys
 import logging
 import subprocess
+import time
+import random
 
 # Configure logging
 logging.basicConfig(
@@ -17,7 +19,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize Flask app
 app = Flask(__name__)
+
+# Configure OpenTelemetry if enabled
+otel_enabled = os.getenv('OTEL_ENABLED', 'true').lower() == 'true'
+if otel_enabled:
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+        from opentelemetry.instrumentation.flask import FlaskInstrumentor
+        from opentelemetry.sdk.resources import Resource
+
+        # Set up tracer provider with resource
+        resource = Resource.create({"service.name": os.getenv("OTEL_SERVICE_NAME", "supervisord-app")})
+        tracer_provider = TracerProvider(resource=resource)
+
+        # Use console exporter for now (will show traces in logs)
+        console_exporter = ConsoleSpanExporter()
+        span_processor = BatchSpanProcessor(console_exporter)
+        tracer_provider.add_span_processor(span_processor)
+
+        trace.set_tracer_provider(tracer_provider)
+
+        # Instrument Flask app
+        FlaskInstrumentor().instrument_app(app)
+
+        logger.info("OpenTelemetry instrumentation enabled")
+    except Exception as e:
+        logger.warning(f"Failed to initialize OpenTelemetry: {e}")
+        otel_enabled = False
+else:
+    logger.info("OpenTelemetry instrumentation disabled")
 
 @app.route('/')
 def home():
@@ -112,10 +146,36 @@ def info():
         'environment': {
             'APP_ENV': os.getenv('APP_ENV', 'development'),
             'PORT': os.getenv('PORT', '8080'),
-            'OTEL_ENABLED': os.getenv('OTEL_ENABLED', 'false')
+            'OTEL_ENABLED': str(otel_enabled)
         },
         'process_manager': 'supervisord',
         'python_version': sys.version
+    })
+
+@app.route('/test-trace')
+def test_trace():
+    """Generate custom trace spans to demonstrate OTEL instrumentation"""
+    if not otel_enabled:
+        return jsonify({
+            'error': 'OpenTelemetry is not enabled',
+            'hint': 'Set OTEL_ENABLED=true environment variable'
+        }), 400
+
+    # Get tracer and create custom spans
+    tracer = trace.get_tracer(__name__)
+
+    with tracer.start_as_current_span("custom-operation") as span:
+        span.set_attribute("operation.type", "demo")
+        span.set_attribute("operation.id", random.randint(1000, 9999))
+
+        # Simulate some processing
+        time.sleep(0.05)
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Custom trace generated! Check logs with: docker-compose logs | grep "custom-operation"',
+        'otel_enabled': True,
+        'service_name': os.getenv("OTEL_SERVICE_NAME", "supervisord-app")
     })
 
 def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processes, ps_output):
@@ -241,18 +301,36 @@ def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processe
                     </div>
 
                     <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;">
-                        <div style="background: white; border: 2px solid #28a745; border-radius: 6px; padding: 15px; min-width: 200px; text-align: center;">
-                            <div style="color: #28a745; font-weight: bold; margin-bottom: 5px;">✓ RUNNING</div>
-                            <div style="font-weight: bold;">PID %d</div>
-                            <div style="color: #666; font-size: 14px; margin-top: 5px;">Flask Application</div>
-                            <div style="color: #999; font-size: 12px;">Port 8080</div>
-                        </div>
+    """
 
-                        <div style="background: white; border: 2px dashed #ccc; border-radius: 6px; padding: 15px; min-width: 200px; text-align: center;">
-                            <div style="color: #999; font-weight: bold; margin-bottom: 5px;">+ Additional Processes</div>
-                            <div style="color: #666; font-size: 14px;">Background Workers</div>
-                            <div style="color: #999; font-size: 12px;">OTEL Agent, etc.</div>
+    # Add a box for each supervisor process
+    for proc in supervisor_processes:
+        is_running = proc['status'] == 'RUNNING'
+        border_color = '#28a745' if is_running else '#dc3545'
+        status_color = '#28a745' if is_running else '#dc3545'
+        status_icon = '✓' if is_running else '✗'
+
+        # Determine process description
+        if proc['name'] == 'app':
+            description = 'Flask Application'
+            extra_info = 'Port 8080'
+        elif proc['name'] == 'otel-agent':
+            description = 'OTEL Agent'
+            extra_info = '(Sidecar)'
+        else:
+            description = proc['name'].replace('-', ' ').title()
+            extra_info = 'Process'
+
+        html += f"""
+                        <div style="background: white; border: 2px solid {border_color}; border-radius: 6px; padding: 15px; min-width: 200px; text-align: center;">
+                            <div style="color: {status_color}; font-weight: bold; margin-bottom: 5px;">{status_icon} {proc['status']}</div>
+                            <div style="font-weight: bold;">{proc['name']}</div>
+                            <div style="color: #666; font-size: 14px; margin-top: 5px;">{description}</div>
+                            <div style="color: #999; font-size: 12px;">{extra_info}</div>
                         </div>
+        """
+
+    html += f"""
                     </div>
                 </div>
             </div>
@@ -261,13 +339,13 @@ def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processe
             <div class="process-item">
                 <div>
                     <strong>supervisord</strong><br>
-                    <code style="color: #666;">%s</code>
+                    <code style="color: #666;">{pid1_cmd}</code>
                 </div>
                 <span class="pid-badge">PID 1</span>
             </div>
 
             <h2>⚙️ Managed Processes</h2>
-    """ % (current_pid, pid1_cmd)
+    """
 
     for proc in supervisor_processes:
         status_class = 'status-running' if proc['status'] == 'RUNNING' else 'status-stopped'

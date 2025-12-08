@@ -150,13 +150,15 @@ make test
 
 ### 3. Add New Processes
 
-1. Edit `config/supervisord.conf`:
+1. Edit `config/supervisord.conf` to add agents or sidecars:
 ```ini
-[program:my-worker]
-command=python worker.py
+[program:monitoring-agent]
+command=python monitoring_agent.py
 directory=/app
 autostart=true
 autorestart=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
 ```
 
 2. Rebuild and restart:
@@ -297,7 +299,8 @@ make fresh
 ## Next Steps
 
 - **Customize** `app/app.py` with your application logic
-- **Add workers** in `config/supervisord.conf`
+- **Add monitoring agents** or sidecars in `config/supervisord.conf`
+- **Test OTEL instrumentation** with `make test-trace`
 - **Test locally** with `make dev`
 - **Deploy** to App Platform when ready
 
