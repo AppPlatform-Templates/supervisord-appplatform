@@ -44,7 +44,7 @@ services:
       # OpenTelemetry Configuration
       # Logs to console by default for easy debugging
       # Set OTEL_EXPORTER_OTLP_ENDPOINT to send to your collector
-      - key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
         value: ""
         scope: RUN_TIME
 

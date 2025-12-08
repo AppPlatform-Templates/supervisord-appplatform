@@ -71,21 +71,6 @@ Replace the example Flask app with your own:
 
 1. **Replace `app/app.py`** with your application code
 2. **Update `app/requirements.txt`** with your dependencies
-3. **Modify `config/supervisord.conf`** to define your processes
-
-Example: Adding a background worker
-
-```ini
-# Uncomment in supervisord.conf
-[program:worker]
-command=python worker.py
-directory=/app
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/app/worker.err.log
-stdout_logfile=/var/log/app/worker.out.log
-priority=15
-```
 
 ## Step 4: Push to GitHub
 
@@ -107,20 +92,20 @@ doctl apps create --spec .do/app.yaml
 
 This will deploy your application with:
 - **Flask web service** running on port 8080
-- **OpenTelemetry agent** running as a sidecar (enabled by default)
+- **OpenTelemetry Collector** running as a sidecar for observability
 - Both processes managed by supervisord
 
 ### Configure OpenTelemetry Endpoint (Optional)
 
-To send traces to your OTEL collector, update the endpoint in `.do/app.yaml` before deploying:
+To send traces/logs/metrics to your OTEL collector, update the endpoint in `.do/app.yaml` before deploying:
 
 ```yaml
-- key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+- key: OTEL_EXPORTER_OTLP_ENDPOINT
   value: https://your-otel-collector.example.com
   scope: RUN_TIME
 ```
 
-If you don't configure an endpoint, traces will be exported to console logs for debugging.
+If you don't configure an endpoint, traces/logs/metrics will be exported to console logs for debugging.
 
 ## Step 6: Monitor Deployment
 
@@ -265,17 +250,15 @@ envs:
 # View all processes
 supervisorctl status
 
-# Restart a process
+# Restart the main app
 supervisorctl restart app
 
-# Stop a process
-supervisorctl stop worker
-
-# Start a process
-supervisorctl start worker
+# Restart the OTEL collector
+supervisorctl restart otel-collector
 
 # View logs
-tail -f /var/log/app/app.out.log
+supervisorctl tail app stdout
+supervisorctl tail otel-collector stdout
 ```
 
 ## Scaling

@@ -1,6 +1,6 @@
 # Supervisord on DigitalOcean App Platform
 
-A production-ready template for running multi-process applications on DigitalOcean App Platform using [Supervisord](http://supervisord.org/). This template demonstrates how to manage multiple processes within a single container, perfect for applications that need background workers, monitoring agents, or auxiliary services.
+A production-ready template for running multi-process applications on DigitalOcean App Platform using [Supervisord](http://supervisord.org/). This template demonstrates how to manage multiple processes within a single container, perfect for running your application alongside monitoring agents or auxiliary services.
 
 [![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/AppPlatform-Templates/supervisord-appplatform/tree/main)
 
@@ -10,20 +10,19 @@ Supervisord is a process control system that allows you to monitor and control m
 
 ## Features
 
-- **Multi-Process Management**: Run your main application alongside background workers, monitoring agents, or other auxiliary processes
+- **Multi-Process Management**: Run your main application alongside monitoring agents or auxiliary services
 - **Process Monitoring**: Automatic restart of failed processes
 - **Easy Configuration**: Simple INI-style configuration for defining processes
 - **Logging**: Centralized logging for all managed processes
 - **Health Checks**: Built-in health check endpoint for App Platform
 - **Example Application**: Includes a Flask web application as a working example
-- **OpenTelemetry Ready**: Optional configuration for running OpenTelemetry agent alongside your app
+- **OpenTelemetry Ready**: Includes OpenTelemetry Collector for observability out of the box
 
 ## Use Cases
 
-- **Web Service + Monitoring Agent**: Run your application with OpenTelemetry, StatsD, or other monitoring agents
-- **Web Service + Sidecar Processes**: Add auxiliary processes that need to run alongside your main application
-- **Multi-Process Applications**: Applications that need multiple related processes on the same host
-- **Agent-Based Architecture**: Run your app with agents for observability, security scanning, or data collection
+- **Web Service + Monitoring**: Run your application with OpenTelemetry Collector or other monitoring sidecars
+- **Multi-Process Applications**: Applications that need multiple related processes in one container
+- **Sidecar Pattern**: Run auxiliary processes alongside your main application (logging agents, proxies, etc.)
 
 ## Quick Start
 
@@ -61,8 +60,8 @@ No CLI tools required!
 
 Your app will be deployed with **2 processes running**:
 - ✅ Flask web service (port 8080)
-- ✅ OpenTelemetry agent (sidecar)
-- ✅ Both managed by supervisord (PID 1)
+- ✅ OpenTelemetry Collector (sidecar)
+- ✅ Both managed by supervisord
 
 Visit the app URL to see the live process dashboard!
 
@@ -71,9 +70,9 @@ Visit the app URL to see the live process dashboard!
 **Cost**: ~$12/month (1 vCPU, 1GB RAM)
 
 **Running Processes**:
-1. **Supervisord** (PID 1) - Process supervisor managing everything
-2. **Flask Web App** - Your application on port 8080 with OpenTelemetry instrumentation
-3. **OTEL Agent** - OpenTelemetry sidecar for observability
+1. **Flask Web App** - Your application on port 8080 with OpenTelemetry instrumentation
+2. **OTEL Collector** - OpenTelemetry sidecar for observability
+3. Both managed by **Supervisord** (process manager)
 
 **Features**:
 - Process dashboard at `/` showing all running processes
@@ -81,7 +80,7 @@ Visit the app URL to see the live process dashboard!
 - Test trace endpoint at `/test-trace` to verify OTEL instrumentation
 - Automatic trace generation for all HTTP requests
 
-The template demonstrates multi-process architecture - perfect for adding monitoring agents, security scanners, or any sidecar processes alongside your web service!
+The template demonstrates multi-process architecture with your web service and OpenTelemetry Collector running side by side.
 
 ## Architecture
 
@@ -138,37 +137,18 @@ Replace `app/app.py` with your own application. Make sure to:
 - Listen on the port specified by the `PORT` environment variable (default: 8080)
 - Update `app/requirements.txt` with your dependencies
 
-### 2. Configure Processes
+### 2. Understand the Configuration
 
-Edit `config/supervisord.conf` to define your processes:
+The template includes two processes configured in `config/supervisord.conf`:
+- **app**: Your main Flask application (modify `app/app.py` and `start.sh`)
+- **otel-collector**: OpenTelemetry Collector for observability
 
-```ini
-[program:my-app]
-command=python my_app.py
-directory=/app
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/app/my-app.err.log
-stdout_logfile=/var/log/app/my-app.out.log
-priority=10
-
-[program:my-worker]
-command=python worker.py
-directory=/app
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/app/worker.err.log
-stdout_logfile=/var/log/app/worker.out.log
-priority=15
-```
-
-**Key configuration options**:
+**Key configuration options in supervisord.conf**:
 - `command`: The command to run your process
 - `autostart`: Start process when supervisord starts
 - `autorestart`: Restart process if it exits
-- `priority`: Lower numbers start first
-- `startsecs`: Process must stay running this long to be considered started
-- `stopwaitsecs`: Time to wait for graceful shutdown before SIGKILL
+- `priority`: Lower numbers start first (otel-collector=5, app=10)
+- `stdout_logfile=/dev/fd/1`: Send logs to stdout for App Platform
 
 ### 3. Update Dockerfile
 
@@ -197,11 +177,11 @@ Configure these in your `.do/app.yaml`:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_ENV` | Application environment | `production` |
 | `PORT` | Application port | `8080` |
-| `OTEL_ENABLED` | Enable OpenTelemetry agent | `false` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTEL collector endpoint | - |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTEL collector endpoint (optional) | Console output |
 | `OTEL_SERVICE_NAME` | Service name for tracing | `supervisord-app` |
+
+Add custom environment variables as needed for your application.
 
 ## Managing Processes
 
@@ -250,17 +230,17 @@ docker-compose logs | grep "custom-operation"
 
 Every request generates trace spans with trace IDs, span IDs, and attributes. The `/test-trace` endpoint demonstrates how to create custom spans in your own code. By default, traces are exported to console for easy debugging.
 
-### Sending Traces to a Collector
+### Sending Logs/Traces/Metrics to a Collector
 
-To send traces to your OTEL collector in production:
+To send logs/traces/metrics to your OTEL collector in production:
 
 1. **Update the OTEL endpoint** in `.do/app.yaml`:
    ```yaml
-   - key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+   - key: OTEL_EXPORTER_OTLP_ENDPOINT
      value: https://your-otel-collector.example.com
    ```
 
-2. **Deploy** and your application will automatically send traces to your collector!
+2. **Deploy** and your application will automatically send logs/traces/metrics to your collector!
 
 The OTEL agent process runs alongside your app as a sidecar, demonstrating supervisord's multi-process management capabilities.
 
@@ -268,9 +248,9 @@ The OTEL agent process runs alongside your app as a sidecar, demonstrating super
 
 ### Resource Sizing
 
-- **Basic (1vCPU/1GB)**: Single app + lightweight worker
-- **Standard (1vCPU/2GB)**: App + OTEL agent or heavier background processes
-- **Professional (2vCPU/4GB+)**: Multiple workers or resource-intensive processes
+- **Basic (1vCPU/1GB)**: App + OTEL Collector (recommended starting point)
+- **Standard (1vCPU/2GB)**: For higher traffic or resource-intensive applications
+- **Professional (2vCPU/4GB+)**: For high-traffic production applications
 
 ### Monitoring
 
@@ -304,29 +284,6 @@ Ensure your app:
 ### Processes Restart Frequently
 
 Check `startsecs` in supervisord.conf - the process must stay running this long to be considered successfully started.
-
-## Examples
-
-### Running a Python Worker
-
-Add to `supervisord.conf`:
-```ini
-[program:worker]
-command=celery -A app.tasks worker --loglevel=info
-directory=/app
-autostart=true
-autorestart=true
-```
-
-### Running a Cron-like Task
-
-```ini
-[program:scheduler]
-command=python scheduler.py
-directory=/app
-autostart=true
-autorestart=true
-```
 
 ## Limitations
 

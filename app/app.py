@@ -26,27 +26,55 @@ app = Flask(__name__)
 otel_enabled = os.getenv('OTEL_ENABLED', 'true').lower() == 'true'
 if otel_enabled:
     try:
-        from opentelemetry import trace
+        from opentelemetry import trace, metrics
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
         from opentelemetry.instrumentation.flask import FlaskInstrumentor
         from opentelemetry.sdk.resources import Resource
 
-        # Set up tracer provider with resource
+        # OTEL_EXPORTER_OTLP_ENDPOINT is the base URL for all signals
+        # The Python OTLP HTTP exporters need the full path to each endpoint
+        base_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+        
+        # Set up resource with service name
         resource = Resource.create({"service.name": os.getenv("OTEL_SERVICE_NAME", "supervisord-app")})
-        tracer_provider = TracerProvider(resource=resource)
+        
+        # Configure Traces
+        trace_provider = TracerProvider(resource=resource)
+        trace_exporter = OTLPSpanExporter(endpoint=f"{base_endpoint}/v1/traces")
+        trace_provider.add_span_processor(BatchSpanProcessor(trace_exporter))
+        trace.set_tracer_provider(trace_provider)
+        
+        # Configure Metrics
+        metric_reader = PeriodicExportingMetricReader(
+            OTLPMetricExporter(endpoint=f"{base_endpoint}/v1/metrics")
+        )
+        metric_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metrics.set_meter_provider(metric_provider)
+        
+        # Configure Logs
+        log_provider = LoggerProvider(resource=resource)
+        log_exporter = OTLPLogExporter(endpoint=f"{base_endpoint}/v1/logs")
+        log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+        
+        # Attach OTEL handler to Python logging
+        handler = LoggingHandler(logger_provider=log_provider)
+        logging.getLogger().addHandler(handler)
 
-        # Use console exporter for now (will show traces in logs)
-        console_exporter = ConsoleSpanExporter()
-        span_processor = BatchSpanProcessor(console_exporter)
-        tracer_provider.add_span_processor(span_processor)
-
-        trace.set_tracer_provider(tracer_provider)
-
-        # Instrument Flask app
+        # Instrument Flask app (auto-generates traces and metrics)
         FlaskInstrumentor().instrument_app(app)
 
-        logger.info("OpenTelemetry instrumentation enabled")
+        logger.info(f"OpenTelemetry instrumentation enabled - base endpoint: {base_endpoint}")
+        logger.info(f"  Traces: {base_endpoint}/v1/traces")
+        logger.info(f"  Metrics: {base_endpoint}/v1/metrics")
+        logger.info(f"  Logs: {base_endpoint}/v1/logs")
     except Exception as e:
         logger.warning(f"Failed to initialize OpenTelemetry: {e}")
         otel_enabled = False
@@ -391,7 +419,6 @@ def render_process_html(current_pid, current_ppid, pid1_cmd, supervisor_processe
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
     logger.info(f"Starting Flask app on port {port}")
-    logger.info(f"OpenTelemetry enabled: {os.getenv('OTEL_ENABLED', 'false')}")
 
     # Run the app
     app.run(

@@ -8,9 +8,7 @@ This template provides a complete, production-ready setup for running multi-proc
 
 - **Supervisord Process Manager**: Manages multiple processes in a single container
 - **Example Flask Application**: A working web app with health checks
-- **Example Background Worker**: Demonstrates running background tasks
-- **OpenTelemetry Support**: Optional observability agent integration
-- **Multiple Deployment Configurations**: Starter, with-workers, and with-OTEL options
+- **OpenTelemetry Collector**: Observability sidecar for traces, metrics, and logs
 
 ## Deployment Methods
 
@@ -48,35 +46,23 @@ For more control over the setup:
 2. **Customize the Application**
    - Replace `app/app.py` with your application
    - Update `app/requirements.txt` with your dependencies
-   - Modify `config/supervisord.conf` for your processes
+   - Modify `config/supervisord.conf` to add additional processes if needed
 
 3. **Update App Spec**
    ```bash
-   # Edit .do/examples/starter.yaml and replace AppPlatform-Templates
-   sed -i '' 's/AppPlatform-Templates/your-username/g' .do/examples/starter.yaml
+   # Edit .do/app.yaml and replace AppPlatform-Templates
+   sed -i '' 's/AppPlatform-Templates/your-username/g' .do/app.yaml
    ```
 
 4. **Deploy via doctl**
    ```bash
-   doctl apps create --spec .do/examples/starter.yaml
+   doctl apps create --spec .do/app.yaml
    ```
 
 ## Configuration Files Explained
 
-### `.do/deploy.template.yaml`
-Used by the "Deploy to DigitalOcean" button. Contains placeholder values that get filled in during deployment.
-
 ### `.do/app.yaml`
-Main App Platform specification file. Use this for production deployments.
-
-### `.do/examples/starter.yaml`
-Basic configuration - single instance with minimal processes (~$12/month).
-
-### `.do/examples/with-otel.yaml`
-Includes OpenTelemetry agent for observability (~$18/month).
-
-### `.do/examples/with-workers.yaml`
-Enables background worker processes (~$18/month).
+Main App Platform specification file. Defines the service configuration, GitHub repo, environment variables, and instance size.
 
 ## Customizing Your Application
 
@@ -94,57 +80,30 @@ The template includes a simple Flask application. To use your own:
 - Update `config/supervisord.conf` with appropriate commands
 - Ensure your app listens on port specified by `PORT` env var
 
-### 2. Configure Your Processes
+### 2. Understand the Configuration
 
-Edit `config/supervisord.conf` to define your processes:
+The template runs two processes managed by supervisord:
+- **app**: Your main Flask application (or replace with your own)
+- **otel-collector**: OpenTelemetry Collector for observability
 
-```ini
-[program:my-app]
-command=python my_app.py
-directory=/app
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/app/my-app.err.log
-stdout_logfile=/var/log/app/my-app.out.log
-priority=10
+Both processes are configured in `config/supervisord.conf`:
+- `priority`: Lower numbers start first (otel-collector=5, app=10)
+- `autostart`: Processes start when supervisord starts
+- `autorestart`: Processes restart automatically if they crash
+- `stdout_logfile=/dev/fd/1`: Logs are sent to stdout for App Platform
 
-[program:background-worker]
-command=python worker.py
-directory=/app
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/app/worker.err.log
-stdout_logfile=/var/log/app/worker.out.log
-priority=20
+### 3. Configure OpenTelemetry (Optional)
+
+The OpenTelemetry Collector is enabled by default. To send data to your own collector:
+
+Set the endpoint in `.do/app.yaml`:
+```yaml
+- key: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: https://your-collector.example.com
+  scope: RUN_TIME
 ```
 
-**Key settings:**
-- `priority`: Lower numbers start first
-- `autostart`: Start when supervisord starts
-- `autorestart`: Restart if process dies
-- `command`: Command to run your process
-
-### 3. Enable Optional Features
-
-**OpenTelemetry Agent:**
-
-1. Uncomment OTEL dependencies in `app/requirements.txt`
-2. Set environment variables in your App Spec:
-   ```yaml
-   - key: OTEL_ENABLED
-     value: "true"
-   - key: OTEL_EXPORTER_OTLP_ENDPOINT
-     value: https://your-collector.example.com
-   ```
-
-**Background Workers:**
-
-1. Uncomment the `[program:worker]` section in `config/supervisord.conf`
-2. Optionally set environment variable to conditionally enable:
-   ```yaml
-   - key: WORKER_ENABLED
-     value: "true"
-   ```
+To disable OTEL, remove the `[program:otel-collector]` section from `config/supervisord.conf`.
 
 ## After Deployment
 
@@ -196,62 +155,6 @@ Access the console to interact with supervisord:
 
    # View logs
    tail -f /var/log/app/app.out.log
-   ```
-
-## Common Scenarios
-
-### Running a Python App with Celery Worker
-
-1. **Update requirements.txt:**
-   ```
-   Flask==3.0.0
-   celery==5.3.4
-   redis==5.0.1
-   ```
-
-2. **Update supervisord.conf:**
-   ```ini
-   [program:flask-app]
-   command=python app.py
-   autostart=true
-   autorestart=true
-
-   [program:celery-worker]
-   command=celery -A app.celery worker --loglevel=info
-   autostart=true
-   autorestart=true
-   ```
-
-### Running a Node.js App with Background Jobs
-
-1. **Update Dockerfile:**
-   ```dockerfile
-   FROM node:18-slim
-
-   RUN apt-get update && apt-get install -y supervisor curl && rm -rf /var/lib/apt/lists/*
-
-   WORKDIR /app
-   COPY package*.json ./
-   COPY . .
-   RUN npm install
-
-   COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-   EXPOSE 8080
-   CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
-   ```
-
-2. **Update supervisord.conf:**
-   ```ini
-   [program:node-app]
-   command=node server.js
-   autostart=true
-   autorestart=true
-
-   [program:job-processor]
-   command=node worker.js
-   autostart=true
-   autorestart=true
    ```
 
 ## Troubleshooting
