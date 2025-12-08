@@ -36,6 +36,11 @@ spec:
         scope: RUN_TIME
 
       # OpenTelemetry Configuration
+      # Enable OTEL instrumentation in the Flask app
+      - key: OTEL_ENABLED
+        value: "true"
+        scope: RUN_TIME
+
       # Logs to console by default - set endpoint to send to your collector
       - key: OTEL_EXPORTER_OTLP_ENDPOINT
         value: ""
