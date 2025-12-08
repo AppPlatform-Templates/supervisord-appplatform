@@ -13,6 +13,9 @@ WORKDIR /app
 COPY app/ /app/
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Make start script executable
+RUN chmod +x /app/start.sh
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
