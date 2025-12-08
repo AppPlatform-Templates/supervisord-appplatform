@@ -47,11 +47,11 @@ doctl account get
 
 ### Update App Specification
 
-Edit the `.do/examples/starter.yaml` file to point to your repository:
+Edit the `.do/app.yaml` file to point to your repository:
 
 ```bash
 # Replace AppPlatform-Templates with your actual username
-sed -i '' 's/AppPlatform-Templates/your-username/g' .do/examples/starter.yaml
+sed -i '' 's/AppPlatform-Templates/your-username/g' .do/app.yaml
 ```
 
 Or manually edit the file:
@@ -99,31 +99,28 @@ git push origin main
 
 ## Step 5: Deploy to App Platform
 
-### Quick Deploy (Starter Configuration)
+Deploy using the app specification file:
 
 ```bash
-doctl apps create --spec .do/examples/starter.yaml
-```
-
-### Deploy with OpenTelemetry
-
-If you want to enable OpenTelemetry:
-
-1. Update `.do/examples/with-otel.yaml` with your GitHub repo
-2. Configure your OTEL endpoint
-3. Deploy:
-   ```bash
-   doctl apps create --spec .do/examples/with-otel.yaml
-   ```
-
-### Custom Deployment
-
-Use the main spec file:
-
-```bash
-# Update .do/app.yaml with your configuration
 doctl apps create --spec .do/app.yaml
 ```
+
+This will deploy your application with:
+- **Flask web service** running on port 8080
+- **OpenTelemetry agent** running as a sidecar (enabled by default)
+- Both processes managed by supervisord
+
+### Configure OpenTelemetry Endpoint (Optional)
+
+To send traces to your OTEL collector, update the endpoint in `.do/app.yaml` before deploying:
+
+```yaml
+- key: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+  value: https://your-otel-collector.example.com
+  scope: RUN_TIME
+```
+
+If you don't configure an endpoint, traces will be exported to console logs for debugging.
 
 ## Step 6: Monitor Deployment
 
