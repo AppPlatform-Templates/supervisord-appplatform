@@ -17,7 +17,7 @@ COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create necessary directories
-RUN mkdir -p /var/log/supervisor /var/log/app
+RUN mkdir -p /var/log/supervisor /var/log/app /var/run
 
 # Expose application port
 EXPOSE 8080
