@@ -54,6 +54,3 @@ htmlcov/
 
 # Supervisor
 /var/run/supervisor.sock
-
-# App Platform
-.do/deploy.template.yaml
