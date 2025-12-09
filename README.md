@@ -12,7 +12,7 @@ Supervisord is a process control system that allows you to monitor and control m
 
 - **Multi-Process Management**: Run your main application alongside monitoring agents or auxiliary services
 - **Easy Configuration**: Simple INI-style configuration for defining processes
-- **Logging**: Centralized logging for all managed processes
+- **Centralized Logging**: All process logs available through App Platform
 - **Health Checks**: Built-in health check endpoint for App Platform
 - **Example Application**: Includes a Flask web application as a working example
 - **OpenTelemetry Ready**: Includes OpenTelemetry Collector for observability out of the box
@@ -25,44 +25,112 @@ Supervisord is a process control system that allows you to monitor and control m
 
 ## Quick Start
 
-### Option 1: One-Click Deploy (Easiest)
+### Option 1: One-Click Deploy (Fastest)
 
 Click the "Deploy to DigitalOcean" button above to:
 - Deploy the template directly to App Platform
 - Get your app running in minutes with zero configuration
+- No CLI tools required!
 
-No CLI tools required!
+**Note**: The one-click deploy uses the template repository. To customize the code:
+1. Fork this repository to your GitHub account
+2. Update your app settings in App Platform to point to your fork
+3. Customize the code and push changes
 
-**Note**: The one-click deploy uses the template repository. To customize the code, fork this repository and update your app settings in App Platform to point to your fork.
+### Option 2: Fork and Customize (Recommended)
 
-### Option 2: Manual Deploy via CLI
+For full control over your deployment:
 
 #### Prerequisites
-
 - [DigitalOcean Account](https://cloud.digitalocean.com/registrations/new)
 - [doctl CLI](https://docs.digitalocean.com/reference/doctl/how-to/install/) installed and authenticated
+- GitHub account
 
-#### Deploy in 2 Steps
+#### Steps
 
-1. **Clone the repository**:
+**Step 1: Authenticate doctl**
+
+```bash
+# Authenticate with DigitalOcean
+doctl auth init
+
+# Verify authentication
+doctl account get
+```
+
+**Step 2: Fork the repository**
+
+**Why fork?** You need your own repository to customize the code and enable auto-deployment.
+
+1. Go to [https://github.com/AppPlatform-Templates/supervisord-appplatform](https://github.com/AppPlatform-Templates/supervisord-appplatform)
+2. Click the "Fork" button in the top-right corner
+3. Clone your fork:
    ```bash
-   git clone https://github.com/AppPlatform-Templates/supervisord-appplatform.git
+   git clone https://github.com/YOUR_USERNAME/supervisord-appplatform.git
    cd supervisord-appplatform
    ```
 
-2. **Deploy to App Platform**:
-   ```bash
-   doctl apps create --spec .do/app.yaml
-   ```
+**Step 3: Update app specification**
 
-Your app will be deployed with **2 processes running**:
-- ✅ Flask web service (port 8080)
-- ✅ OpenTelemetry Collector (sidecar)
-- ✅ Both managed by supervisord
+Edit `.do/app.yaml` to point to your forked repository:
 
-Visit the app URL to see the live process dashboard!
+```bash
+# Replace AppPlatform-Templates with your GitHub username
+sed -i '' 's/AppPlatform-Templates/YOUR_USERNAME/g' .do/app.yaml
+```
 
-**To customize**: Fork this repository, update the app in App Platform settings to point to your fork, then customize the code and push changes.
+Or manually edit the file:
+
+```yaml
+services:
+  - name: supervisord-service
+    github:
+      repo: YOUR_USERNAME/supervisord-appplatform  # Your fork
+      branch: main
+      deploy_on_push: true
+```
+
+**Step 4: (Optional) Customize your application**
+
+Replace the example Flask app with your own:
+
+1. **Replace `app/app.py`** with your application code
+2. **Update `app/requirements.txt`** with your dependencies
+
+**Step 5: Push to GitHub**
+
+Commit and push your changes:
+
+```bash
+git add .
+git commit -m "Customize supervisord template for my app"
+git push origin main
+```
+
+**Step 6: Deploy to App Platform**
+
+Deploy using the app specification file:
+
+```bash
+doctl apps create --spec .do/app.yaml
+```
+
+This will deploy your application with:
+- **Flask web service** running on port 8080
+- **OpenTelemetry Collector** running as a sidecar for observability
+- Both processes managed by supervisord
+
+### Option 3: Quick CLI Deploy (No Fork)
+
+To quickly test the template without forking:
+
+```bash
+git clone https://github.com/AppPlatform-Templates/supervisord-appplatform.git
+cd supervisord-appplatform
+doctl apps create --spec .do/app.yaml
+```
+
+**To customize later**: Fork the repository, update the app in App Platform settings to point to your fork, then customize and push changes.
 
 ## What's Included
 
@@ -71,7 +139,7 @@ Visit the app URL to see the live process dashboard!
 2. **OTEL Collector** - OpenTelemetry sidecar for observability
 3. Both managed by **Supervisord** (process manager)
 
-**Features**:
+**Endpoints**:
 - Process dashboard at `/` showing all running processes
 - Health check endpoint at `/health`
 - Test trace endpoint at `/test-trace` to verify OTEL instrumentation
@@ -117,12 +185,13 @@ supervisord-appplatform/
 │   ├── requirements.txt         # Python dependencies (includes OTEL)
 │   └── start.sh                 # Application startup script
 ├── config/
-│   └── supervisord.conf         # Supervisord configuration
+│   ├── supervisord.conf         # Supervisord configuration
+│   └── otel-collector-config.yaml  # OpenTelemetry Collector config
 ├── Dockerfile                   # Container definition
 ├── docker-compose.yml           # Local development setup
 ├── Makefile                     # Development commands
-├── README.md                    # This file
-└── .gitignore
+├── OTEL_PRODUCTION.md          # Production OTEL configuration guide
+└── README.md                    # This file
 ```
 
 ## Customizing for Your Application
@@ -134,25 +203,32 @@ Replace `app/app.py` with your own application. Make sure to:
 - Listen on the port specified by the `PORT` environment variable (default: 8080)
 - Update `app/requirements.txt` with your dependencies
 
-### 2. Understand the Configuration
+**Example for Python applications:**
+```python
+import os
+from flask import Flask
 
-The template includes two processes configured in `config/supervisord.conf`:
-- **app**: Your main Flask application (modify `app/app.py` and `start.sh`)
-- **otel-collector**: OpenTelemetry Collector for observability
+app = Flask(__name__)
+port = int(os.getenv("PORT", 8080))
 
-**Key configuration options in supervisord.conf**:
-- `command`: The command to run your process
-- `autostart`: Start process when supervisord starts
-- `autorestart`: Restart process if it exits
-- `priority`: Lower numbers start first (otel-collector=5, app=10)
-- `stdout_logfile=/dev/fd/1`: Send logs to stdout for App Platform
+@app.route('/health')
+def health():
+    return {"status": "healthy"}, 200
 
-### 3. Update Dockerfile
+@app.route('/')
+def index():
+    return "My Custom App"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=port)
+```
+
+### 2. Update Dockerfile for Different Languages
 
 If you're using a different language or runtime, update the `Dockerfile`:
 
+**Example: Node.js application**
 ```dockerfile
-# Example: Node.js application
 FROM node:18-slim
 
 RUN apt-get update && apt-get install -y supervisor curl && rm -rf /var/lib/apt/lists/*
@@ -168,44 +244,227 @@ EXPOSE 8080
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 ```
 
-## Environment Variables
+### 3. Configure Supervisord Processes
 
-Configure these in your `.do/app.yaml`:
+The template includes two processes configured in `config/supervisord.conf`:
+- **app**: Your main Flask application (modify `app/app.py` and `start.sh`)
+- **otel-collector**: OpenTelemetry Collector for observability
+
+**Key configuration options in supervisord.conf**:
+```ini
+[program:app]
+command=/app/start.sh              # Command to run your process
+autostart=true                     # Start process when supervisord starts
+autorestart=true                   # Restart process if it exits
+priority=10                        # Lower numbers start first
+stdout_logfile=/dev/fd/1          # Send logs to stdout for App Platform
+stderr_logfile=/dev/fd/2          # Send errors to stderr
+```
+
+**To add a new process:**
+```ini
+[program:myworker]
+command=python /app/worker.py
+autostart=true
+autorestart=true
+priority=15
+stdout_logfile=/dev/fd/1
+stderr_logfile=/dev/fd/2
+```
+
+### 4. Configure OpenTelemetry (Optional)
+
+**By default**, traces/logs/metrics are exported to console logs (visible in App Platform Runtime Logs). No configuration needed!
+
+**To send to production backends** (Grafana Cloud, Datadog, Honeycomb, etc.), see [OTEL_PRODUCTION.md](OTEL_PRODUCTION.md) for step-by-step configuration examples.
+
+**To disable OTEL**, remove the `[program:otel-collector]` section from `config/supervisord.conf`.
+
+## Monitoring Deployment
+
+### View Deployment Status
+
+```bash
+# List all apps
+doctl apps list
+
+# Get app details (replace APP_ID with your actual app ID)
+doctl apps get <APP_ID>
+
+# View deployment logs
+doctl apps logs <APP_ID> --type deploy
+```
+
+### Access Your Application
+
+Once deployed, App Platform will provide a URL:
+
+```bash
+doctl apps get <APP_ID> --format LiveURL
+```
+
+Visit this URL to see your application running!
+
+### Verify Multi-Process Setup
+
+**Check health endpoint:**
+```bash
+curl https://your-app-url.ondigitalocean.app/health
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "service": "supervisord-app"
+}
+```
+
+**View process information:**
+```bash
+curl https://your-app-url.ondigitalocean.app/info
+```
+
+This will show environment variables and process manager info.
+
+## Managing Your Application
+
+### Configure GitHub Auto-Deploy
+
+App Platform automatically deploys when you push to your repository:
+
+1. Make changes to your code
+2. Commit and push:
+   ```bash
+   git add .
+   git commit -m "Update application"
+   git push origin main
+   ```
+3. App Platform will automatically build and deploy
+
+To disable auto-deploy, update your spec:
+```yaml
+github:
+  repo: your-username/supervisord-appplatform
+  branch: main
+  deploy_on_push: false  # Change to false
+```
+
+Then update the app:
+```bash
+doctl apps update <APP_ID> --spec .do/app.yaml
+```
+
+### Update Your App
+
+**Update via CLI:**
+```bash
+# Update app configuration
+doctl apps update <APP_ID> --spec .do/app.yaml
+
+# Trigger manual deployment
+doctl apps create-deployment <APP_ID>
+```
+
+**Update via Console:**
+1. Go to [DigitalOcean Control Panel](https://cloud.digitalocean.com/apps)
+2. Select your app
+3. Click "Settings" > "App Spec"
+4. Edit the YAML configuration
+5. Click "Save" to redeploy
+
+### Environment Variables
+
+**Add environment variables via CLI:**
+Update `.do/app.yaml`:
+```yaml
+envs:
+  - key: APP_ENV
+    value: production
+    scope: RUN_TIME
+
+  - key: CUSTOM_VAR
+    value: your-value
+    scope: RUN_TIME
+
+  # For secrets
+  - key: API_KEY
+    value: your-secret-key
+    scope: RUN_TIME
+    type: SECRET
+```
+
+Then update the app:
+```bash
+doctl apps update <APP_ID> --spec .do/app.yaml
+```
+
+**Or via the console:**
+1. Navigate to your app
+2. Go to "Settings" > "Environment Variables"
+3. Add/edit variables
+4. Click "Save" (triggers redeployment)
+
+**Common environment variables:**
 
 | Variable | Description | Default   |
 |----------|-------------|-----------|
 | `PORT` | Application port | `8080` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTEL collector endpoint (optional) | Console output |
 | `OTEL_SERVICE_NAME` | Service name for tracing | `supervisord-app` |
 
 Add custom environment variables as needed for your application.
 
-## Managing Processes
+### Managing Processes
 
-### View Running Processes
-
-SSH into your container (via App Platform console) and run:
+**Access console:**
+1. Go to your app in the DigitalOcean console
+2. Click "Console" tab
+3. Run supervisorctl commands:
 
 ```bash
+# View all processes
 supervisorctl status
-```
 
-### Restart a Process
-
-```bash
+# Restart the main app
 supervisorctl restart app
+
+# Restart the OTEL collector
+supervisorctl restart otel-collector
+
+# View logs
+supervisorctl tail app stdout
+supervisorctl tail otel-collector stdout
 ```
 
-### View Logs
-
+**View logs via doctl:**
 ```bash
-# View supervisord logs
-tail -f /var/log/supervisor/supervisord.log
+# View runtime logs
+doctl apps logs <APP_ID> --type run --follow
 
-# View app logs
-tail -f /var/log/app/app.out.log
-tail -f /var/log/app/app.err.log
+# View build logs
+doctl apps logs <APP_ID> --type build
+
+# View deployment logs
+doctl apps logs <APP_ID> --type deploy
 ```
+
+### Scaling
+
+**Vertical Scaling (More Resources):**
+
+Update instance size in your spec:
+```yaml
+instance_size_slug: apps-s-2vcpu-4gb  # Upgrade to 2 vCPU, 4GB RAM
+```
+
+Then update:
+```bash
+doctl apps update <APP_ID> --spec .do/app.yaml
+```
+
+**Horizontal Scaling (More Instances):**
+
+**Note**: Supervisord manages processes within a single container. For horizontal scaling across multiple containers, consider splitting services in your App Platform spec.
 
 ## OpenTelemetry Instrumentation
 
@@ -216,6 +475,9 @@ The template includes OpenTelemetry instrumentation out of the box, demonstratin
 The Flask app is automatically instrumented and generates traces for all HTTP requests:
 
 ```bash
+# Start locally with docker-compose
+docker-compose up
+
 # View automatic traces from any endpoint
 curl http://127.0.0.1:8080/health
 docker-compose logs | grep -i trace
@@ -227,61 +489,174 @@ docker-compose logs | grep "custom-operation"
 
 Every request generates trace spans with trace IDs, span IDs, and attributes. The `/test-trace` endpoint demonstrates how to create custom spans in your own code. By default, traces are exported to console for easy debugging.
 
-### Sending Logs/Traces/Metrics to a Collector
+### Sending Data to Production Backends
 
-To send logs/traces/metrics to your OTEL collector in production:
+**By default**, traces/logs/metrics are exported to console logs (visible in App Platform Runtime Logs). No configuration needed!
 
-1. **Update the OTEL endpoint** in `.do/app.yaml`:
-   ```yaml
-   - key: OTEL_EXPORTER_OTLP_ENDPOINT
-     value: https://your-otel-collector.example.com:4318
-   ```
-
-2. **Deploy** and your application will automatically send logs/traces/metrics to your collector!
-
-**Note**: Use port `4318` for HTTP or `4317` for gRPC. See [OTEL_PRODUCTION.md](OTEL_PRODUCTION.md) for specific examples (Datadog, Grafana Cloud, Honeycomb, etc.).
+**To send to production backends** (Grafana Cloud, Datadog, Honeycomb, etc.), see [OTEL_PRODUCTION.md](OTEL_PRODUCTION.md) for step-by-step configuration examples.
 
 The OTEL Collector process runs alongside your app as a sidecar, demonstrating supervisord's multi-process management capabilities.
 
+## Troubleshooting
+
+### Deployment Fails
+
+1. **Check build logs:**
+   ```bash
+   doctl apps logs <APP_ID> --type build
+   ```
+
+2. **Check deployment logs:**
+   ```bash
+   doctl apps logs <APP_ID> --type deploy
+   ```
+
+3. **Common issues:**
+   - Invalid GitHub repository path in `.do/app.yaml`
+   - Missing dependencies in `requirements.txt`
+   - Port mismatch (ensure app listens on `PORT` environment variable)
+   - Ensure your app listens on `0.0.0.0`, not `localhost`
+
+### Health Check Fails
+
+1. Ensure your app exposes `/health` endpoint that returns 200 status
+2. Check that app listens on `0.0.0.0`, not `localhost`
+3. Verify port matches `http_port` in spec (default: 8080)
+4. Increase `initial_delay_seconds` in health check config if app takes longer to start
+
+**Example health check in `.do/app.yaml`:**
+```yaml
+health_check:
+  http_path: /health
+  initial_delay_seconds: 40
+  period_seconds: 10
+  timeout_seconds: 5
+  success_threshold: 1
+  failure_threshold: 3
+```
+
+### Process Won't Start
+
+1. **Access console and check supervisord status:**
+   ```bash
+   supervisorctl status
+   ```
+
+2. **View process logs:**
+   ```bash
+   supervisorctl tail app stderr
+   supervisorctl tail app stdout
+   ```
+
+3. **Check supervisord configuration:**
+   ```bash
+   cat /etc/supervisor/conf.d/supervisord.conf
+   ```
+
+4. **Common issues:**
+   - Incorrect command in supervisord.conf
+   - Missing file permissions
+   - Dependencies not installed
+   - Process exits immediately (check `startsecs` setting)
+
+### Processes Restart Frequently
+
+Check `startsecs` in supervisord.conf - the process must stay running this long to be considered successfully started.
+
+```ini
+[program:app]
+startsecs=10  # Process must run for 10 seconds to be considered started
+```
+
+### Auto-Deploy Not Working
+
+**Problem**: Pushing to GitHub doesn't trigger deployment
+
+**Solution:**
+- Check `deploy_on_push: true` in `.do/app.yaml`
+- Verify GitHub integration in App Platform console
+- Check build logs for errors
+- Ensure you're pushing to the correct branch specified in the spec
+
 ## Production Considerations
+
+### Security
+
+- **Never commit secrets** to the repository
+- Use App Platform environment variables with `type: SECRET` for sensitive data
+- Keep dependencies updated regularly
+- Use specific version tags in Dockerfile instead of `latest`
+- Review and restrict file permissions in your container
 
 ### Monitoring
 
 - Use App Platform's built-in metrics for container health
 - Configure logging forwarding to centralized logging systems
 - Set up alerts for container restarts and health check failures
+- Monitor resource usage (CPU, memory) and scale accordingly
 
-### Security
+### Performance
 
-- Never commit secrets to the repository
-- Use App Platform environment variables with `type: SECRET` for sensitive data
-- Keep dependencies updated regularly
-- Use specific version tags in Dockerfile instead of `latest`
+- Use specific version tags for all dependencies
+- Optimize Docker image size by removing unnecessary packages
+- Consider using multi-stage builds for smaller images
+- Configure appropriate resource limits in app spec
 
-## Common Issues
+## Local Development
 
-### Process Fails to Start
+### Using Docker Compose
 
-Check logs in App Platform console or via supervisorctl:
 ```bash
-supervisorctl tail app stderr
+# Build and start all services
+docker-compose up --build
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-### Health Check Failing
+### Using Makefile
 
-Ensure your app:
-1. Listens on `0.0.0.0` (not `localhost`)
-2. Responds on the `/health` endpoint
-3. Starts within `initial_delay_seconds` (default: 40s)
+```bash
+# Build the container
+make build
 
-### Processes Restart Frequently
+# Run the container
+make up
 
-Check `startsecs` in supervisord.conf - the process must stay running this long to be considered successfully started.
+# View logs
+make logs
+
+# Stop and remove containers
+make down
+```
+
+## Next Steps
+
+- **Add Monitoring**: Set up alerts for health check failures in App Platform
+- **Configure Logging**: Forward logs to external service (Datadog, Loggly, etc.)
+- **Set up Custom Domain**: Add your own domain in App Platform settings
+- **Enable SSL**: Free SSL certificates included with App Platform
+- **Add Database**: Connect to DigitalOcean Managed Databases if needed
+- **CI/CD Integration**: Set up automated testing before deployment
 
 ## Resources
 
 - [Supervisord Documentation](http://supervisord.org/)
-- [DigitalOcean App Platform Docs](https://docs.digitalocean.com/products/app-platform/)
+- [DigitalOcean App Platform Documentation](https://docs.digitalocean.com/products/app-platform/)
+- [App Spec Reference](https://docs.digitalocean.com/products/app-platform/reference/app-spec/)
+- [doctl CLI Reference](https://docs.digitalocean.com/reference/doctl/)
 - [App Platform Pricing](https://www.digitalocean.com/pricing/app-platform)
 - [OpenTelemetry Documentation](https://opentelemetry.io/docs/)
 
+## Getting Help
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/AppPlatform-Templates/supervisord-appplatform/issues)
+- **DigitalOcean Community**: [community.digitalocean.com](https://www.digitalocean.com/community)
+- **Support**: [DigitalOcean Support](https://www.digitalocean.com/support/)
+
+---
+
+Happy deploying!
