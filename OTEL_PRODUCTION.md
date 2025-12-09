@@ -1,54 +1,91 @@
 # OpenTelemetry Production Configuration
 
-## TL;DR
+## Current Setup (Default)
 
-**Your current setup works in production as-is!** 
+**By default, telemetry goes to console logs only.**
 
-- Flask app → `localhost:4318` → OTEL Collector → logs to console
-- Both run in the same container, so `localhost` works fine
-- Deploy directly to App Platform - no changes needed
+Your app is already collecting traces, metrics, and logs. You can see them in App Platform's Runtime Logs.
 
-Only configure the sections below if you want to send telemetry to an external observability platform (Datadog, Grafana, etc.).
+**No configuration needed!** Deploy and it works.
 
 ---
 
-## Current Setup (Works in Production)
+## Send to Grafana Cloud (Optional)
 
-```
-Container:
-  Flask App (port 8080) → localhost:4318 → OTEL Collector → console logs
-```
+To send telemetry to Grafana Cloud, make these 2 changes:
 
-This is perfect for getting started. Traces, metrics, and logs appear in your container logs.
+### 1. Update `config/otel-collector-config.yaml`
 
----
-
-## Send to External Platform (Optional)
-
-If you want traces/metrics in Datadog, Grafana, etc., follow these 2 steps:
-
-### Step 1: Add Environment Variables
-
-In App Platform, add these env vars:
-
-```bash
-OTEL_COLLECTOR_ENDPOINT=https://your-backend.com:4317
-OTEL_COLLECTOR_INSECURE=false
-```
-
-### Step 2: Update Collector Config
-
-Edit `config/otel-collector-config.yaml`, change exporters from `[logging]` to `[logging, otlp]`:
+Add the OTLP exporter:
 
 ```yaml
+exporters:
+  logging:
+    loglevel: info
+
+  otlp:
+    endpoint: otlp-gateway-prod-us-central-0.grafana.net:443
+    headers:
+      authorization: "Basic ${env:GRAFANA_CLOUD_TOKEN}"
+    tls:
+      insecure: false
+
 service:
   pipelines:
     traces:
-      exporters: [logging, otlp]  # was: [logging]
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, otlp]  # Changed: added otlp
+
     metrics:
-      exporters: [logging, otlp]  # was: [logging]
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, otlp]  # Changed: added otlp
+
     logs:
-      exporters: [logging, otlp]  # was: [logging]
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, otlp]  # Changed: added otlp
 ```
 
-That's it! Rebuild and deploy.
+**Note:** Get your Grafana Cloud OTLP endpoint from: Grafana Cloud Portal → Stack → OTLP
+
+### 2. Add Token in `.do/app.yaml`
+
+```yaml
+envs:
+  # ... existing env vars ...
+
+  - key: GRAFANA_CLOUD_TOKEN
+    value: your-grafana-cloud-token-here
+    scope: RUN_TIME
+    type: SECRET
+```
+
+**Note:** Get your token from: Grafana Cloud Portal → Stack → OTLP
+
+### 3. Deploy
+
+```bash
+git add config/otel-collector-config.yaml .do/app.yaml
+git commit -m "Add Grafana Cloud"
+git push
+
+# Or update existing app
+doctl apps update <APP_ID> --spec .do/app.yaml
+```
+
+Done! Telemetry now goes to both console logs AND Grafana Cloud.
+
+---
+
+## Other Platforms
+
+For Datadog, Honeycomb, New Relic, or other platforms:
+
+1. Check their OTEL documentation for the exporter configuration
+2. Add the exporter to `config/otel-collector-config.yaml`
+3. Add required API keys/tokens to `.do/app.yaml` as secrets
+4. Deploy
+
+The pattern is the same - just replace the exporter details.
