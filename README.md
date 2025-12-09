@@ -37,7 +37,7 @@ Click the "Deploy to DigitalOcean" button above to:
 2. Update your app settings in App Platform to point to your fork
 3. Customize the code and push changes
 
-### Option 2: Fork and Customize (Recommended)
+### Option 2: Fork and Customize
 
 For full control over your deployment:
 
@@ -99,13 +99,7 @@ Replace the example Flask app with your own:
 
 **Step 5: Push to GitHub**
 
-Commit and push your changes:
-
-```bash
-git add .
-git commit -m "Customize supervisord template for my app"
-git push origin main
-```
+Commit and push your changes
 
 **Step 6: Deploy to App Platform**
 
@@ -194,85 +188,7 @@ supervisord-appplatform/
 └── README.md                    # This file
 ```
 
-## Customizing for Your Application
-
-### 1. Replace the Example App
-
-Replace `app/app.py` with your own application. Make sure to:
-- Keep the `/health` endpoint for App Platform health checks
-- Listen on the port specified by the `PORT` environment variable (default: 8080)
-- Update `app/requirements.txt` with your dependencies
-
-**Example for Python applications:**
-```python
-import os
-from flask import Flask
-
-app = Flask(__name__)
-port = int(os.getenv("PORT", 8080))
-
-@app.route('/health')
-def health():
-    return {"status": "healthy"}, 200
-
-@app.route('/')
-def index():
-    return "My Custom App"
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=port)
-```
-
-### 2. Update Dockerfile for Different Languages
-
-If you're using a different language or runtime, update the `Dockerfile`:
-
-**Example: Node.js application**
-```dockerfile
-FROM node:18-slim
-
-RUN apt-get update && apt-get install -y supervisor curl && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-COPY app/ /app/
-COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-RUN npm install
-
-EXPOSE 8080
-
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
-```
-
-### 3. Configure Supervisord Processes
-
-The template includes two processes configured in `config/supervisord.conf`:
-- **app**: Your main Flask application (modify `app/app.py` and `start.sh`)
-- **otel-collector**: OpenTelemetry Collector for observability
-
-**Key configuration options in supervisord.conf**:
-```ini
-[program:app]
-command=/app/start.sh              # Command to run your process
-autostart=true                     # Start process when supervisord starts
-autorestart=true                   # Restart process if it exits
-priority=10                        # Lower numbers start first
-stdout_logfile=/dev/fd/1          # Send logs to stdout for App Platform
-stderr_logfile=/dev/fd/2          # Send errors to stderr
-```
-
-**To add a new process:**
-```ini
-[program:myworker]
-command=python /app/worker.py
-autostart=true
-autorestart=true
-priority=15
-stdout_logfile=/dev/fd/1
-stderr_logfile=/dev/fd/2
-```
-
-### 4. Configure OpenTelemetry (Optional)
+## Configure OpenTelemetry (Optional)
 
 **By default**, traces/logs/metrics are exported to console logs (visible in App Platform Runtime Logs). No configuration needed!
 
@@ -333,13 +249,8 @@ This will show environment variables and process manager info.
 
 App Platform automatically deploys when you push to your repository:
 
-1. Make changes to your code
-2. Commit and push:
-   ```bash
-   git add .
-   git commit -m "Update application"
-   git push origin main
-   ```
+1. Make changes to your forked repo
+2. Commit and push
 3. App Platform will automatically build and deploy
 
 To disable auto-deploy, update your spec:
@@ -361,9 +272,6 @@ doctl apps update <APP_ID> --spec .do/app.yaml
 ```bash
 # Update app configuration
 doctl apps update <APP_ID> --spec .do/app.yaml
-
-# Trigger manual deployment
-doctl apps create-deployment <APP_ID>
 ```
 
 **Update via Console:**
@@ -604,43 +512,12 @@ startsecs=10  # Process must run for 10 seconds to be considered started
 
 ## Local Development
 
-### Using Docker Compose
-
-```bash
-# Build and start all services
-docker-compose up --build
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-### Using Makefile
-
-```bash
-# Build the container
-make build
-
-# Run the container
-make up
-
-# View logs
-make logs
-
-# Stop and remove containers
-make down
-```
-
-## Next Steps
-
-- **Add Monitoring**: Set up alerts for health check failures in App Platform
-- **Configure Logging**: Forward logs to external service (Datadog, Loggly, etc.)
-- **Set up Custom Domain**: Add your own domain in App Platform settings
-- **Enable SSL**: Free SSL certificates included with App Platform
-- **Add Database**: Connect to DigitalOcean Managed Databases if needed
-- **CI/CD Integration**: Set up automated testing before deployment
+Want to run and test the application locally? See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for:
+- Complete setup instructions
+- Available `make` commands
+- Development workflow
+- Testing and troubleshooting
+- How to add new processes
 
 ## Resources
 
