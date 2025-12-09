@@ -188,7 +188,7 @@ Visit **http://127.0.0.1:8080** in your browser to see:
 make processes
 
 # Or detailed view
-curl -s "http://localhost:8080/?format=json" | python3 -m json.tool
+curl -s "http://127.0.0.1:8080/?format=json" | python3 -m json.tool
 ```
 
 ### Option 3: Inside Container

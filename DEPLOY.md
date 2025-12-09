@@ -101,11 +101,11 @@ To send traces/logs/metrics to your OTEL collector, update the endpoint in `.do/
 
 ```yaml
 - key: OTEL_EXPORTER_OTLP_ENDPOINT
-  value: https://your-otel-collector.example.com
+  value: https://your-otel-collector.example.com:4318
   scope: RUN_TIME
 ```
 
-If you don't configure an endpoint, traces/logs/metrics will be exported to console logs for debugging.
+Use port `4318` for HTTP or `4317` for gRPC. By default, traces/logs/metrics are exported to console logs for debugging.
 
 ## Step 6: Monitor Deployment
 

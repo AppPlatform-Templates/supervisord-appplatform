@@ -12,24 +12,24 @@ This template provides a complete, production-ready setup for running multi-proc
 
 ## Deployment Methods
 
-### Method 1: Deploy to DigitalOcean Button (Recommended)
+### Method 1: Deploy to DigitalOcean Button (Quickest)
 
-This is the easiest way to get started!
+This is the fastest way to see the template in action!
 
 1. Click the "Deploy to DO" button in the README
-2. Authorize GitHub access (if needed)
-3. Review the configuration
-4. Click "Deploy"
+2. Review the configuration
+3. Click "Create App"
 
 The button will:
-- Automatically fork the repository to your GitHub account
+- Deploy the app directly from the template repository
 - Use the `.do/deploy.template.yaml` configuration
-- Deploy your app to DigitalOcean App Platform
+- Create a running instance on DigitalOcean App Platform
 
-**Important**: After deployment, you should:
-- Replace the example Flask app with your actual application
-- Update `config/supervisord.conf` with your processes
-- Push changes to trigger auto-deployment
+**Important**: This deploys from the template repo, not your own fork. To customize:
+1. Fork the repository to your GitHub account
+2. Update the app settings in App Platform to point to your fork
+3. Customize `app/app.py` and `config/supervisord.conf`
+4. Push changes to your fork to trigger deployments
 
 ### Method 2: Manual Fork and Deploy
 
@@ -99,9 +99,11 @@ The OpenTelemetry Collector is enabled by default. To send data to your own coll
 Set the endpoint in `.do/app.yaml`:
 ```yaml
 - key: OTEL_EXPORTER_OTLP_ENDPOINT
-  value: https://your-collector.example.com
+  value: https://your-collector.example.com:4318
   scope: RUN_TIME
 ```
+
+Use port `4318` for HTTP or `4317` for gRPC. See [OTEL_PRODUCTION.md](OTEL_PRODUCTION.md) for backend-specific examples.
 
 To disable OTEL, remove the `[program:otel-collector]` section from `config/supervisord.conf`.
 

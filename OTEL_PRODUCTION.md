@@ -52,33 +52,3 @@ service:
 ```
 
 That's it! Rebuild and deploy.
-
----
-
-## Popular Backends
-
-**Grafana Cloud:**
-```bash
-OTEL_COLLECTOR_ENDPOINT=https://otlp-gateway-prod-us-central-0.grafana.net:4317
-OTEL_COLLECTOR_INSECURE=false
-```
-Add auth in collector config: `authorization: "Basic ${env:OTEL_API_KEY}"`
-
-**Datadog:**
-```bash
-OTEL_COLLECTOR_ENDPOINT=https://http-intake.logs.datadoghq.com:443
-OTEL_COLLECTOR_INSECURE=false
-```
-
-**Honeycomb:**
-```bash
-OTEL_COLLECTOR_ENDPOINT=https://api.honeycomb.io:443
-OTEL_COLLECTOR_INSECURE=false
-```
-Add header in collector config: `x-honeycomb-team: "${env:OTEL_API_KEY}"`
-
-**Jaeger (self-hosted):**
-```bash
-OTEL_COLLECTOR_ENDPOINT=http://jaeger-collector:4317
-OTEL_COLLECTOR_INSECURE=true
-```

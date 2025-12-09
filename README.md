@@ -28,12 +28,13 @@ Supervisord is a process control system that allows you to monitor and control m
 
 ### Option 1: One-Click Deploy (Easiest)
 
-Click the "Deploy to DigitalOcean" button above to automatically:
-- Fork this repository to your GitHub account
-- Deploy to App Platform with starter configuration
-- Get your app running in minutes
+Click the "Deploy to DigitalOcean" button above to:
+- Deploy the template directly to App Platform
+- Get your app running in minutes with zero configuration
 
 No CLI tools required!
+
+**Note**: The one-click deploy uses the template repository. To customize the code, fork this repository and update your app settings in App Platform to point to your fork.
 
 ### Option 2: Manual Deploy via CLI
 
@@ -88,23 +89,23 @@ The template demonstrates multi-process architecture with your web service and O
 ┌─────────────────────────────────────┐
 │   DigitalOcean App Platform         │
 │                                     │
-│  ┌───────────────────────────────┐ │
-│  │    Container (Port 8080)      │ │
-│  │                               │ │
-│  │  ┌─────────────────────────┐ │ │
-│  │  │   Supervisord (PID 1)   │ │ │
-│  │  └──────────┬──────────────┘ │ │
-│  │             │                 │ │
-│  │    ┌────────┴────────┐       │ │
-│  │    │                 │       │ │
-│  │  ┌─▼──────┐    ┌────▼─────┐ │ │
-│  │  │ Flask  │    │   OTEL   │ │ │
-│  │  │  Web   │    │  Agent   │ │ │
-│  │  │  App   │    │ (Sidecar)│ │ │
-│  │  │:8080   │    │          │ │ │
-│  │  └────────┘    └──────────┘ │ │
-│  │                               │ │
-│  └───────────────────────────────┘ │
+│  ┌───────────────────────────────┐  │
+│  │    Container (Port 8080)      │  │
+│  │                               │  │
+│  │  ┌─────────────────────────┐  │  │
+│  │  │   Supervisord (PID 1)   │  │  │
+│  │  └──────────┬──────────────┘  │  │
+│  │             │                 │  │
+│  │    ┌────────┴────────┐        │  │
+│  │    │                 │        │  │
+│  │  ┌─▼──────┐    ┌────▼─────┐   │  │
+│  │  │ Flask  │    │   OTEL   │   │  │
+│  │  │  Web   │    │  Agent   │   │  │
+│  │  │  App   │    │ (Sidecar)│   │  │
+│  │  │:8080   │    │          │   │  │
+│  │  └────────┘    └──────────┘   │  │
+│  │                               │  │
+│  └───────────────────────────────┘  │
 └─────────────────────────────────────┘
 ```
 
@@ -175,8 +176,8 @@ CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 Configure these in your `.do/app.yaml`:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable | Description | Default   |
+|----------|-------------|-----------|
 | `PORT` | Application port | `8080` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTEL collector endpoint (optional) | Console output |
 | `OTEL_SERVICE_NAME` | Service name for tracing | `supervisord-app` |
@@ -220,11 +221,11 @@ The Flask app is automatically instrumented and generates traces for all HTTP re
 
 ```bash
 # View automatic traces from any endpoint
-curl http://localhost:8080/health
+curl http://127.0.0.1:8080/health
 docker-compose logs | grep -i trace
 
 # Test custom span creation
-curl http://localhost:8080/test-trace
+curl http://127.0.0.1:8080/test-trace
 docker-compose logs | grep "custom-operation"
 ```
 
@@ -237,12 +238,14 @@ To send logs/traces/metrics to your OTEL collector in production:
 1. **Update the OTEL endpoint** in `.do/app.yaml`:
    ```yaml
    - key: OTEL_EXPORTER_OTLP_ENDPOINT
-     value: https://your-otel-collector.example.com
+     value: https://your-otel-collector.example.com:4318
    ```
 
 2. **Deploy** and your application will automatically send logs/traces/metrics to your collector!
 
-The OTEL agent process runs alongside your app as a sidecar, demonstrating supervisord's multi-process management capabilities.
+**Note**: Use port `4318` for HTTP or `4317` for gRPC. See [OTEL_PRODUCTION.md](OTEL_PRODUCTION.md) for specific examples (Datadog, Grafana Cloud, Honeycomb, etc.).
+
+The OTEL Collector process runs alongside your app as a sidecar, demonstrating supervisord's multi-process management capabilities.
 
 ## Production Considerations
 
@@ -313,6 +316,3 @@ MIT License - feel free to use this template for your projects.
 - DigitalOcean Community: [DigitalOcean Community](https://www.digitalocean.com/community)
 - Supervisord Docs: [supervisord.org](http://supervisord.org/)
 
----
-
-Built with ❤️ for DigitalOcean App Platform
