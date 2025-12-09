@@ -11,7 +11,6 @@ Supervisord is a process control system that allows you to monitor and control m
 ## Features
 
 - **Multi-Process Management**: Run your main application alongside monitoring agents or auxiliary services
-- **Process Monitoring**: Automatic restart of failed processes
 - **Easy Configuration**: Simple INI-style configuration for defining processes
 - **Logging**: Centralized logging for all managed processes
 - **Health Checks**: Built-in health check endpoint for App Platform
@@ -99,7 +98,7 @@ The template demonstrates multi-process architecture with your web service and O
 │  │  │ Flask  │    │   OTEL   │   │  │
 │  │  │  Web   │    │  Agent   │   │  │
 │  │  │  App   │    │ (Sidecar)│   │  │
-│  │  │:8080   │    │          │   │  │
+│  │  │ :8080  │    │          │   │  │
 │  │  └────────┘    └──────────┘   │  │
 │  │                               │  │
 │  └───────────────────────────────┘  │
@@ -285,18 +284,4 @@ Check `startsecs` in supervisord.conf - the process must stay running this long 
 - [DigitalOcean App Platform Docs](https://docs.digitalocean.com/products/app-platform/)
 - [App Platform Pricing](https://www.digitalocean.com/pricing/app-platform)
 - [OpenTelemetry Documentation](https://opentelemetry.io/docs/)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT License - feel free to use this template for your projects.
-
-## Support
-
-- GitHub Issues: Report bugs or request features
-- DigitalOcean Community: [DigitalOcean Community](https://www.digitalocean.com/community)
-- Supervisord Docs: [supervisord.org](http://supervisord.org/)
 
