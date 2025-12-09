@@ -42,19 +42,16 @@ No CLI tools required!
 
 - [DigitalOcean Account](https://cloud.digitalocean.com/registrations/new)
 - [doctl CLI](https://docs.digitalocean.com/reference/doctl/how-to/install/) installed and authenticated
-- GitHub account (for source deployment)
 
-#### Deploy in 3 Steps
+#### Deploy in 2 Steps
 
-1. **Fork this repository** to your GitHub account
-
-2. **Update the App Spec**: Edit `.do/app.yaml`:
+1. **Clone the repository**:
    ```bash
-   # Replace AppPlatform-Templates with your GitHub username
-   sed -i '' 's/AppPlatform-Templates/your-username/g' .do/app.yaml
+   git clone https://github.com/AppPlatform-Templates/supervisord-appplatform.git
+   cd supervisord-appplatform
    ```
 
-3. **Deploy to App Platform**:
+2. **Deploy to App Platform**:
    ```bash
    doctl apps create --spec .do/app.yaml
    ```
@@ -66,9 +63,9 @@ Your app will be deployed with **2 processes running**:
 
 Visit the app URL to see the live process dashboard!
 
-## What's Included
+**To customize**: Fork this repository, update the app in App Platform settings to point to your fork, then customize the code and push changes.
 
-**Cost**: ~$12/month (1 vCPU, 1GB RAM)
+## What's Included
 
 **Running Processes**:
 1. **Flask Web App** - Your application on port 8080 with OpenTelemetry instrumentation
@@ -249,12 +246,6 @@ The OTEL Collector process runs alongside your app as a sidecar, demonstrating s
 
 ## Production Considerations
 
-### Resource Sizing
-
-- **Basic (1vCPU/1GB)**: App + OTEL Collector (recommended starting point)
-- **Standard (1vCPU/2GB)**: For higher traffic or resource-intensive applications
-- **Professional (2vCPU/4GB+)**: For high-traffic production applications
-
 ### Monitoring
 
 - Use App Platform's built-in metrics for container health
@@ -287,13 +278,6 @@ Ensure your app:
 ### Processes Restart Frequently
 
 Check `startsecs` in supervisord.conf - the process must stay running this long to be considered successfully started.
-
-## Limitations
-
-- **No Persistent Storage**: App Platform uses ephemeral storage. Use DigitalOcean Spaces for persistent files
-- **Single Container**: All processes run in one container and share resources
-- **No Horizontal Scaling**: For multi-container scaling, separate services in App Platform
-- **Not PID 1 Alternative**: Supervisord is not designed to replace init systems
 
 ## Resources
 
