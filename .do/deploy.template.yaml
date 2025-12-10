@@ -53,10 +53,14 @@ spec:
         scope: RUN_TIME
 
       # Template tracking
-      - key: BASE_TEMPLATE
+      - key: APPPLAT_BASE_TEMPLATE
         value: supervisord
         scope: RUN_TIME
 
-      - key: TEMPLATE_VERSION
-        value: v1.0.0
+      - key: APPPLAT_TEMPLATE_TYPE
+        value: base
+        scope: RUN_TIME
+
+      - key: APPPLAT_TEMPLATE_COMMIT_SHA
+        value: ${_self.COMMIT_HASH} 
         scope: RUN_TIME
