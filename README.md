@@ -65,7 +65,7 @@ supervisord-appplatform/
 │   └── start.sh                      # Application startup script
 ├── config/
 │   ├── supervisord.conf              # Supervisord configuration
-│   └── otel-collector-config.yaml   # OpenTelemetry Collector config
+│   └── otel-collector-config.yaml    # OpenTelemetry Collector config
 ├── Dockerfile                        # Container definition
 ├── docker-compose.yml                # Local development setup
 └── Makefile                          # Development commands
@@ -102,7 +102,7 @@ Run locally using Docker Compose:
 docker-compose up
 ```
 
-Access the app at `http://localhost:8080`
+Access the app at `http://localhost:8080` or `http://127.0.0.1:8080`
 
 See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for detailed local development instructions.
 
