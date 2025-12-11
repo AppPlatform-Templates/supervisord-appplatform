@@ -34,39 +34,31 @@ services:
       # Application Environment
       - key: APP_ENV
         value: production
-        scope: RUN_TIME
 
       # Port
       - key: PORT
         value: "8080"
-        scope: RUN_TIME
 
       # OpenTelemetry Configuration
       # Enable OTEL instrumentation in the Flask app
       - key: OTEL_ENABLED
         value: "true"
-        scope: RUN_TIME
 
       # Flask app sends to local OTEL Collector sidecar
       # The collector then forwards to your backend (configure in otel-collector-config.yaml)
       - key: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://localhost:4318"
-        scope: RUN_TIME
 
       # Service name for distributed tracing
       - key: OTEL_SERVICE_NAME
         value: supervisord-app
-        scope: RUN_TIME
 
       # Template tracking
       - key: APPPLAT_BASE_TEMPLATE
         value: supervisord
-        scope: RUN_TIME
 
       - key: APPPLAT_TEMPLATE_TYPE
         value: base
-        scope: RUN_TIME
 
       - key: APPPLAT_TEMPLATE_COMMIT_SHA
         value: ${_self.COMMIT_HASH}
-        scope: RUN_TIME
