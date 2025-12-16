@@ -201,7 +201,7 @@ def test_trace():
 
     return jsonify({
         'status': 'success',
-        'message': 'Custom trace generated! Check logs with: docker-compose logs | grep "custom-operation"',
+        'message': 'Custom trace generated!',
         'otel_enabled': True,
         'service_name': os.getenv("OTEL_SERVICE_NAME", "supervisord-app")
     })
