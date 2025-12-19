@@ -88,11 +88,7 @@ cd supervisord-appplatform
 doctl apps create --spec .do/app.yaml
 ```
 
-### Deploy Your Own Fork
-
-1. Fork this repository to your GitHub account
-2. Update `.do/app.yaml` to point to your fork
-3. Deploy using `doctl apps create --spec .do/app.yaml`
+**To customize**: Fork this repo, update the repo reference in your chosen template (`.do/` folder) to point to your fork, then deploy.
 
 ## Local Development
 
